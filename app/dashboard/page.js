@@ -19,8 +19,15 @@ export default function Dashboard() {
     setStudents(data || []);
   }
 
+  async function logout() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   return (
     <div style={{ padding: "20px" }}>
+      <button onClick={logout}>Logout</button>
+
       <h1>Coach Dashboard</h1>
       <p>Student progress overview.</p>
 
