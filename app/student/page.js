@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabaseClient";
 
 export default function StudentDashboard() {
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadProfile();
@@ -25,19 +26,28 @@ export default function StudentDashboard() {
       .single();
 
     setProfile(data);
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <div style={{ padding: "20px" }}>Loading...</div>;
   }
 
   if (!profile) {
-    return <div style={{ padding: "20px" }}>Loading...</div>;
+    return <div style={{ padding: "20px" }}>Profile not found.</div>;
   }
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>Welcome {profile.full_name}</h1>
 
-      <p><strong>Rating:</strong> {profile.rating}</p>
+      <p>
+        <strong>Rating:</strong> {profile.rating}
+      </p>
 
-      <p><strong>Goal:</strong> {profile.goal}</p>
+      <p>
+        <strong>Goal:</strong> {profile.goal}
+      </p>
     </div>
   );
 }
