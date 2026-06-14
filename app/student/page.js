@@ -33,21 +33,45 @@ export default function StudentDashboard() {
     return <div style={{ padding: "20px" }}>Loading...</div>;
   }
 
-  if (!profile) {
-    return <div style={{ padding: "20px" }}>Profile not found.</div>;
-  }
-
   return (
     <div style={{ padding: "20px" }}>
-      <h1>Welcome {profile.full_name}</h1>
+      <h1>Student Dashboard</h1>
 
-      <p>
-        <strong>Rating:</strong> {profile.rating}
-      </p>
+      <div
+        style={{
+          border: "1px solid #ddd",
+          padding: "20px",
+          marginTop: "20px",
+          borderRadius: "8px",
+        }}
+      >
+        <h2>{profile.full_name}</h2>
 
-      <p>
-        <strong>Goal:</strong> {profile.goal}
-      </p>
+        <p>
+          <strong>Rating:</strong> {profile.rating}
+        </p>
+
+        <p>
+          <strong>Goal:</strong> {profile.goal}
+        </p>
+      </div>
+
+      <div
+        style={{
+          border: "1px solid #ddd",
+          padding: "20px",
+          marginTop: "20px",
+          borderRadius: "8px",
+        }}
+      >
+        <h2>Training Progress</h2>
+
+        <p>Lessons Completed: 2</p>
+
+        <p>Homework Completed: 0</p>
+
+        <p>Puzzle Score: 0</p>
+      </div>
     </div>
   );
 }
