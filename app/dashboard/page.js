@@ -22,25 +22,24 @@ export default function Dashboard() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Coach Dashboard</h1>
-      <p>Student lesson progress overview.</p>
+      <p>Student progress overview.</p>
 
-      <div style={{ marginTop: "25px" }}>
-        {students.map((student) => (
-          <div
-            key={student.profile_id}
-            style={{
-              border: "1px solid #ddd",
-              padding: "15px",
-              borderRadius: "10px",
-              marginBottom: "15px",
-            }}
-          >
-            <h2>{student.full_name}</h2>
-            <p>Rating: {student.rating}</p>
-            <p>Completed Lessons: {student.completed_lessons}</p>
-          </div>
-        ))}
-      </div>
+      {students.map((student) => (
+        <div
+          key={student.profile_id}
+          style={{
+            border: "1px solid #ddd",
+            padding: "15px",
+            borderRadius: "10px",
+            marginBottom: "15px",
+          }}
+        >
+          <h2>{student.full_name}</h2>
+          <p>Rating: {student.rating}</p>
+          <p>Completed Lessons: {student.completed_lessons}</p>
+          <p>Completed Homework: {student.completed_homework}</p>
+        </div>
+      ))}
     </div>
   );
 }
