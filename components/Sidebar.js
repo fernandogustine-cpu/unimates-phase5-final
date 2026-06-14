@@ -11,6 +11,7 @@ export default function Sidebar() {
       <Link href="/courses">Courses</Link>
       <Link href="/videos">Videos</Link>
       <Link href="/puzzles">Puzzles</Link>
+  <Link href="/homework">Homework</Link>
       <Link href="/pgn">PGN Analysis</Link>
       <Link href="/tournaments">Tournaments</Link>
       <Link href="/login">Login</Link>
