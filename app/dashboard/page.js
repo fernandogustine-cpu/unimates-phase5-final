@@ -1,52 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Shell from '../../components/Shell';
-import { supabase } from '../../lib/supabaseClient';
 
 export default function HomeworkPage() {
-  const [homework, setHomework] = useState([]);
-
-  useEffect(() => {
-    loadHomework();
-  }, []);
-
-  async function loadHomework() {
-    const { data } = await supabase
-      .from('homework')
-      .select('*')
-      .order('due_date');
-
-    if (data) setHomework(data);
-  }
-
   return (
-    <Shell>
-      <h1>Homework</h1>
+    <Shell title="Homework">
+      <div className="card">
+        <h2>Assigned Homework</h2>
 
-      {homework.map((item) => (
-        <div
-          key={item.id}
-          style={{
-            padding: '15px',
-            marginBottom: '15px',
-            border: '1px solid #ddd',
-            borderRadius: '10px'
-          }}
-        >
-          <h3>{item.title}</h3>
-
-          <p>{item.instructions}</p>
-
-          <p>
-            <strong>Due:</strong> {item.due_date}
-          </p>
-
-          <p>
-            <strong>Status:</strong> {item.status}
-          </p>
+        <div className="card">
+          <h3>Solve 20 Fork Puzzles</h3>
+          <p>Due: 21 June 2026</p>
+          <p>Status: Assigned</p>
         </div>
-      ))}
+
+        <div className="card">
+          <h3>Study Outposts Chapter 1</h3>
+          <p>Due: 21 June 2026</p>
+          <p>Status: Assigned</p>
+        </div>
+
+        <div className="card">
+          <h3>Analyse Carlsen vs Anand</h3>
+          <p>Due: 28 June 2026</p>
+          <p>Status: Assigned</p>
+        </div>
+      </div>
     </Shell>
   );
 }
