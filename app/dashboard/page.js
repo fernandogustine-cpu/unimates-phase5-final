@@ -5,10 +5,23 @@ import { supabase } from "../../lib/supabaseClient";
 
 export default function Dashboard() {
   const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStudentProgress();
+    checkUserAndLoadDashboard();
   }, []);
+
+  async function checkUserAndLoadDashboard() {
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData?.user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    await loadStudentProgress();
+    setLoading(false);
+  }
 
   async function loadStudentProgress() {
     const { data } = await supabase
@@ -22,6 +35,10 @@ export default function Dashboard() {
   async function logout() {
     await supabase.auth.signOut();
     window.location.href = "/login";
+  }
+
+  if (loading) {
+    return <div style={{ padding: "20px" }}>Loading dashboard...</div>;
   }
 
   return (
