@@ -6,11 +6,23 @@ import { supabase } from "../../lib/supabaseClient";
 export default function LessonsPage() {
   const [lessons, setLessons] = useState([]);
   const [completed, setCompleted] = useState({});
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    loadLessons();
-    loadProgress();
+    start();
   }, []);
+
+  async function start() {
+    const { data: userData } = await supabase.auth.getUser();
+    const currentUser = userData?.user;
+    setUser(currentUser);
+
+    await loadLessons();
+
+    if (currentUser) {
+      await loadProgress(currentUser.id);
+    }
+  }
 
   async function loadLessons() {
     const { data } = await supabase
@@ -21,10 +33,11 @@ export default function LessonsPage() {
     setLessons(data || []);
   }
 
-  async function loadProgress() {
+  async function loadProgress(userId) {
     const { data } = await supabase
       .from("lesson_progress")
       .select("*")
+      .eq("user_id", userId)
       .eq("completed", true);
 
     const done = {};
@@ -36,7 +49,13 @@ export default function LessonsPage() {
   }
 
   async function markComplete(lessonId) {
+    if (!user) {
+      alert("Please log in first.");
+      return;
+    }
+
     await supabase.from("lesson_progress").insert({
+      user_id: user.id,
       lesson_id: lessonId,
       completed: true,
       completed_at: new Date().toISOString()
@@ -55,9 +74,9 @@ export default function LessonsPage() {
       <h1>Lessons</h1>
 
       <h3>Course Progress: {progress}%</h3>
-      <p>
-        Completed: {completedCount}/{totalLessons}
-      </p>
+      <p>Completed: {completedCount}/{totalLessons}</p>
+
+      {!user && <p>Please log in to save your progress.</p>}
 
       {lessons.map((lesson) => (
         <div key={lesson.id} style={{ marginBottom: "35px" }}>
