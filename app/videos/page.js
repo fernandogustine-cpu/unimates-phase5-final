@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react';
 import Shell from '../../components/Shell';
 import { supabase } from '../../lib/supabaseClient';
 
+function getEmbedUrl(url) {
+  if (!url) return '';
+
+  if (url.includes('watch?v=')) {
+    return url.replace('watch?v=', 'embed/');
+  }
+
+  if (url.includes('youtu.be/')) {
+    const videoId = url.split('youtu.be/')[1];
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+
+  return url;
+}
+
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
 
@@ -36,7 +51,7 @@ export default function VideosPage() {
           style={{
             background: '#ffffff',
             padding: '20px',
-            marginBottom: '20px',
+            marginBottom: '25px',
             borderRadius: '12px',
             boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
           }}
@@ -53,21 +68,18 @@ export default function VideosPage() {
 
           <p>{video.description}</p>
 
-          <a
-            href={video.youtube_url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <iframe
+            width="100%"
+            height="360"
+            src={getEmbedUrl(video.youtube_url)}
+            title={video.title}
+            frameBorder="0"
+            allowFullScreen
             style={{
-              display: 'inline-block',
-              background: '#2563eb',
-              color: '#fff',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              textDecoration: 'none'
+              borderRadius: '10px',
+              marginTop: '15px'
             }}
-          >
-            Watch Video
-          </a>
+          />
         </div>
       ))}
     </Shell>
