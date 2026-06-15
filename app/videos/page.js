@@ -12,26 +12,33 @@ export default function VideosPage() {
   }, []);
 
   async function loadVideos() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('videos')
       .select('*')
       .order('created_at', { ascending: false });
 
-    setVideos(data || []);
+    if (!error) {
+      setVideos(data || []);
+    }
   }
 
   return (
     <Shell title="Videos">
       <h1>Uni-Mates Chess Academy Video Library</h1>
 
+      <p>
+        Watch training videos from Coach Fernando and improve your chess skills.
+      </p>
+
       {videos.map((video) => (
         <div
           key={video.id}
           style={{
-            background: 'white',
+            background: '#ffffff',
             padding: '20px',
             marginBottom: '20px',
-            borderRadius: '10px'
+            borderRadius: '12px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
           }}
         >
           <h2>{video.title}</h2>
@@ -50,6 +57,14 @@ export default function VideosPage() {
             href={video.youtube_url}
             target="_blank"
             rel="noopener noreferrer"
+            style={{
+              display: 'inline-block',
+              background: '#2563eb',
+              color: '#fff',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              textDecoration: 'none'
+            }}
           >
             Watch Video
           </a>
