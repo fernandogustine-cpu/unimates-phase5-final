@@ -29,7 +29,8 @@ export default function PuzzleTrainer() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error(error);
+      console.error("Puzzle loading error:", error);
+      setMessage("Could not load puzzles.");
       return;
     }
 
@@ -47,14 +48,18 @@ export default function PuzzleTrainer() {
       .trim();
   }
 
-  async function saveAttempt(puzzle, correct, points) {
-    await supabase.from("puzzle_attempts").insert([
+  async function saveAttempt(puzzle, submittedAnswer, isCorrect) {
+    const { error } = await supabase.from("puzzle_attempts").insert([
       {
         puzzle_id: puzzle.id,
-        correct: correct,
-        score: points,
+        submitted_answer: submittedAnswer,
+        is_correct: isCorrect,
       },
     ]);
+
+    if (error) {
+      console.error("Attempt saving error:", error);
+    }
   }
 
   async function onDrop(sourceSquare, targetSquare) {
@@ -74,12 +79,17 @@ export default function PuzzleTrainer() {
     const playedMove = normalizeMove(move.san);
     const correctMove = normalizeMove(puzzle.answer);
 
-    if (playedMove === correctMove || move.to === correctMove.slice(-2)) {
+    const isCorrect =
+      playedMove === correctMove ||
+      normalizeMove(move.from + move.to) === correctMove ||
+      move.to === correctMove.slice(-2);
+
+    if (isCorrect) {
       setGame(tempGame);
       setScore((oldScore) => oldScore + 10);
       setMessage("✅ Correct! Well done.");
 
-      await saveAttempt(puzzle, true, 10);
+      await saveAttempt(puzzle, move.san, true);
 
       setTimeout(() => {
         loadNextPuzzle();
@@ -87,7 +97,7 @@ export default function PuzzleTrainer() {
     } else {
       setMessage("❌ Try again.");
 
-      await saveAttempt(puzzle, false, 0);
+      await saveAttempt(puzzle, move.san, false);
 
       setTimeout(() => {
         setGame(new Chess(puzzle.fen));
@@ -132,17 +142,9 @@ export default function PuzzleTrainer() {
 
         <h2>{puzzle.title}</h2>
 
-        <p>
-          <strong>Theme:</strong> {puzzle.theme}
-        </p>
-
-        <p>
-          <strong>Difficulty:</strong> {puzzle.difficulty}
-        </p>
-
-        <p>
-          <strong>Score:</strong> {score}
-        </p>
+        <p><strong>Theme:</strong> {puzzle.theme}</p>
+        <p><strong>Difficulty:</strong> {puzzle.difficulty}</p>
+        <p><strong>Score:</strong> {score}</p>
 
         <div style={{ width: "520px", maxWidth: "100%", marginTop: "20px" }}>
           <Chessboard
@@ -153,13 +155,7 @@ export default function PuzzleTrainer() {
         </div>
 
         {message && (
-          <p
-            style={{
-              marginTop: "18px",
-              fontSize: "20px",
-              fontWeight: "bold",
-            }}
-          >
+          <p style={{ marginTop: "18px", fontSize: "20px", fontWeight: "bold" }}>
             {message}
           </p>
         )}
