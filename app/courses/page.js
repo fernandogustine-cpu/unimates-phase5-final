@@ -5,65 +5,68 @@ import Shell from "../../components/Shell";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function CoursesPage() {
-  const [items, setItems] = useState([]);
+  const [courses, setCourses] = useState([]);
 
   useEffect(() => {
-    loadItems();
+    loadCourses();
   }, []);
 
-  async function loadItems() {
+  async function loadCourses() {
     const { data, error } = await supabase
       .from("courses")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) setItems(data || []);
+    if (!error) {
+      setCourses(data || []);
+    }
   }
 
   return (
     <Shell title="Courses">
-      <h1>Courses</h1>
-      <p>Uni-Mates Chess Academy training courses.</p>
+      <div style={{ padding: "20px" }}>
+        <h1>Uni-Mates Chess Academy Courses</h1>
 
-      {items.map((course) => (
-        <div
-          key={course.id}
-          style={{
-            border: "1px solid #ddd",
-            padding: "20px",
-            borderRadius: "12px",
-            marginBottom: "20px",
-            background: "white",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h2>{course.title}</h2>
-
-          <p>
-            <strong>Level:</strong> {course.level || "Not set"}
-          </p>
-
-          <p>
-            <strong>Description:</strong>
-          </p>
-
-          <p>{course.description}</p>
-
-          <button
+        {courses.map((course) => (
+          <div
+            key={course.id}
             style={{
-              padding: "10px 20px",
-              background: "#2563eb",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              marginTop: "10px",
+              background: "#fff",
+              padding: "20px",
+              marginBottom: "20px",
+              borderRadius: "12px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
             }}
           >
-            Enroll Now
-          </button>
-        </div>
-      ))}
+            <h2>{course.title}</h2>
+
+            <p>
+              <strong>Level:</strong>{" "}
+              {course.level || "Beginner"}
+            </p>
+
+            <p>
+              <strong>Description:</strong>
+            </p>
+
+            <p>{course.description}</p>
+
+            <button
+              style={{
+                marginTop: "10px",
+                background: "#2563eb",
+                color: "white",
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                cursor: "pointer"
+              }}
+            >
+              Enroll Now
+            </button>
+          </div>
+        ))}
+      </div>
     </Shell>
   );
 }
