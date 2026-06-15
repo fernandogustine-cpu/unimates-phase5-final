@@ -1,159 +1,174 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Shell from '../../components/Shell';
-import { supabase } from '../../lib/supabaseClient';
+import { useEffect, useState } from "react";
+import { Chessboard } from "react-chessboard";
+import { Chess } from "chess.js";
+import { createClient } from "@supabase/supabase-js";
 
-const pieces = {
-  p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
-  P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
-};
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-function fenToBoard(fen) {
-  const position = fen.split(' ')[0];
-  return position.split('/').map(row => {
-    const squares = [];
-    for (let char of row) {
-      if (isNaN(char)) squares.push(char);
-      else for (let i = 0; i < Number(char); i++) squares.push('');
-    }
-    return squares;
-  });
-}
-
-export default function PuzzlesPage() {
-  const [puzzles, setPuzzles] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [message, setMessage] = useState('');
+export default function PuzzleTrainer() {
+  const [puzzles, setPuzzles] = useState<any[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [message, setMessage] = useState("");
   const [score, setScore] = useState(0);
+  const [game, setGame] = useState(new Chess());
 
   useEffect(() => {
     loadPuzzles();
   }, []);
 
   async function loadPuzzles() {
-    const { data } = await supabase
-      .from('puzzles')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from("puzzles")
+      .select("*");
 
-    setPuzzles(data || []);
+    if (!error && data) {
+      setPuzzles(data);
+
+      if (data.length > 0) {
+        const chess = new Chess(data[0].fen);
+        setGame(chess);
+      }
+    }
   }
 
-  if (puzzles.length === 0) {
-    return (
-      <Shell title="Puzzles">
-        <h1>Uni-Mates Puzzle Trainer</h1>
-        <p>No puzzles found.</p>
-      </Shell>
-    );
-  }
+  function loadNextPuzzle() {
+    const next = currentIndex + 1;
 
-  const puzzle = puzzles[current];
-  const board = fenToBoard(puzzle.fen);
-
-  function squareName(row, col) {
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    return files[col] + (8 - row);
-  }
-
-  function handleSquareClick(row, col) {
-    const square = squareName(row, col);
-
-    if (!selected) {
-      setSelected(square);
-      setMessage(`Selected ${square}`);
+    if (next >= puzzles.length) {
+      setMessage("🎉 All puzzles completed!");
       return;
     }
 
-    const move = selected + square;
-    const answer = (puzzle.answer || '').toLowerCase().replaceAll(' ', '');
+    setCurrentIndex(next);
+
+    const chess = new Chess(puzzles[next].fen);
+    setGame(chess);
+
+    setMessage("");
+  }
+
+  function onDrop(sourceSquare: string, targetSquare: string) {
+    const puzzle = puzzles[currentIndex];
+
+    const movePlayed =
+      sourceSquare + targetSquare;
+
+    const solution =
+      puzzle.answer.toLowerCase().replace(/[+#]/g, "");
+
+    const move = game.move({
+      from: sourceSquare,
+      to: targetSquare,
+      promotion: "q",
+    });
+
+    if (!move) return false;
+
+    const newGame = new Chess(game.fen());
+    setGame(newGame);
+
+    const playedSAN = move.san
+      .toLowerCase()
+      .replace(/[+#]/g, "");
 
     if (
-      move.toLowerCase() === answer ||
-      answer.includes(move.toLowerCase()) ||
-      answer.includes(selected.toLowerCase()) ||
-      answer.includes(square.toLowerCase())
+      playedSAN === solution ||
+      move.to === solution.slice(-2)
     ) {
-      setMessage('✅ Correct! Well done.');
-      setScore(score + 10);
+      setMessage("✅ Correct! +10 Points");
+      setScore((s) => s + 10);
+
+      setTimeout(() => {
+        loadNextPuzzle();
+      }, 2000);
     } else {
-      setMessage('❌ Try again.');
+      setMessage("❌ Try Again");
+
+      setTimeout(() => {
+        const reset = new Chess(
+          puzzle.fen
+        );
+        setGame(reset);
+      }, 1000);
     }
 
-    setSelected(null);
+    return true;
   }
 
-  function nextPuzzle() {
-    setCurrent((current + 1) % puzzles.length);
-    setMessage('');
-    setSelected(null);
+  if (puzzles.length === 0) {
+    return <div>Loading puzzles...</div>;
   }
+
+  const puzzle = puzzles[currentIndex];
 
   return (
-    <Shell title="Puzzles">
+    <div
+      style={{
+        maxWidth: "900px",
+        margin: "0 auto",
+        padding: "20px",
+      }}
+    >
       <h1>Uni-Mates Puzzle Trainer</h1>
-      <p>Solve tactical puzzles and improve your chess calculation.</p>
 
       <h2>{puzzle.title}</h2>
-      <p><strong>Theme:</strong> {puzzle.theme}</p>
-      <p><strong>Difficulty:</strong> {puzzle.difficulty}</p>
-      <p><strong>Score:</strong> {score}</p>
+
+      <p>
+        <strong>Theme:</strong> {puzzle.theme}
+      </p>
+
+      <p>
+        <strong>Difficulty:</strong>{" "}
+        {puzzle.difficulty}
+      </p>
+
+      <p>
+        <strong>Score:</strong> {score}
+      </p>
 
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(8, 60px)',
-          width: '480px',
-          border: '3px solid #222',
-          marginTop: '20px'
+          width: "500px",
+          maxWidth: "100%",
         }}
       >
-        {board.map((row, rowIndex) =>
-          row.map((piece, colIndex) => {
-            const dark = (rowIndex + colIndex) % 2 === 1;
-            const square = squareName(rowIndex, colIndex);
-
-            return (
-              <div
-                key={square}
-                onClick={() => handleSquareClick(rowIndex, colIndex)}
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  background: selected === square ? '#facc15' : dark ? '#769656' : '#eeeed2',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '38px',
-                  cursor: 'pointer'
-                }}
-              >
-                {pieces[piece] || ''}
-              </div>
-            );
-          })
-        )}
+        <Chessboard
+          position={game.fen()}
+          onPieceDrop={onDrop}
+        />
       </div>
 
-      <p style={{ marginTop: '20px', fontSize: '20px', fontWeight: 'bold' }}>
-        {message}
-      </p>
+      {message && (
+        <div
+          style={{
+            marginTop: "20px",
+            fontSize: "20px",
+            fontWeight: "bold",
+          }}
+        >
+          {message}
+        </div>
+      )}
 
       <button
-        onClick={nextPuzzle}
+        onClick={loadNextPuzzle}
         style={{
-          background: '#2563eb',
-          color: '#fff',
-          padding: '10px 18px',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer'
+          marginTop: "20px",
+          padding: "10px 20px",
+          background: "#2563eb",
+          color: "white",
+          border: "none",
+          borderRadius: "6px",
+          cursor: "pointer",
         }}
       >
         Next Puzzle
       </button>
-    </Shell>
+    </div>
   );
 }
