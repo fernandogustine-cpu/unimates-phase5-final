@@ -5,39 +5,56 @@ import Shell from '../../components/Shell';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function VideosPage() {
-  const [items,setItems] = useState([]);
-  const [form,setForm] = useState({ title:'', lesson_type:'video', content_url:'', lesson_text:'' });
+  const [videos, setVideos] = useState([]);
 
-  useEffect(()=>{ loadItems(); },[]);
+  useEffect(() => {
+    loadVideos();
+  }, []);
 
-  async function loadItems(){
-    const { data, error } = await supabase.from('lessons').select('*').order('created_at', { ascending: false });
-    if (!error) setItems(data || []);
-  }
+  async function loadVideos() {
+    const { data } = await supabase
+      .from('videos')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  async function addItem(e){
-    e.preventDefault();
-    const { error } = await supabase.from('lessons').insert([form]);
-    if (error) return alert(error.message);
-    setForm({ title:'', lesson_type:'video', content_url:'', lesson_text:'' });
-    loadItems();
+    setVideos(data || []);
   }
 
   return (
-    <Shell title="Video Lessons">
-      <form className="form" onSubmit={addItem}>
-        <input placeholder="Lesson title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} />
-        <input placeholder="YouTube/video link" value={form.content_url} onChange={e=>setForm({...form,content_url:e.target.value})} />
-        <input placeholder="Category" value={form.lesson_text} onChange={e=>setForm({...form,lesson_text:e.target.value})} />
-        <button>Add Video</button>
-      </form>
-      <div className="grid">
-        {items.map(item => (
-          <div className="card" key={item.id}>
-            <h3>{item.title}</h3><p>{item.lesson_text}</p><a href={item.content_url} target="_blank">Open video</a>
-          </div>
-        ))}
-      </div>
+    <Shell title="Videos">
+      <h1>Uni-Mates Chess Academy Video Library</h1>
+
+      {videos.map((video) => (
+        <div
+          key={video.id}
+          style={{
+            background: 'white',
+            padding: '20px',
+            marginBottom: '20px',
+            borderRadius: '10px'
+          }}
+        >
+          <h2>{video.title}</h2>
+
+          <p>
+            <strong>Level:</strong> {video.level}
+          </p>
+
+          <p>
+            <strong>Course:</strong> {video.course}
+          </p>
+
+          <p>{video.description}</p>
+
+          <a
+            href={video.youtube_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Watch Video
+          </a>
+        </div>
+      ))}
     </Shell>
   );
 }
