@@ -47,7 +47,17 @@ export default function PuzzleTrainer() {
       .trim();
   }
 
-  function onDrop(sourceSquare, targetSquare) {
+  async function saveAttempt(puzzle, correct, points) {
+    await supabase.from("puzzle_attempts").insert([
+      {
+        puzzle_id: puzzle.id,
+        correct: correct,
+        score: points,
+      },
+    ]);
+  }
+
+  async function onDrop(sourceSquare, targetSquare) {
     const puzzle = puzzles[currentIndex];
     if (!puzzle) return false;
 
@@ -67,13 +77,17 @@ export default function PuzzleTrainer() {
     if (playedMove === correctMove || move.to === correctMove.slice(-2)) {
       setGame(tempGame);
       setScore((oldScore) => oldScore + 10);
-      setMessage("✅ Correct! +10 points");
+      setMessage("✅ Correct! Well done.");
+
+      await saveAttempt(puzzle, true, 10);
 
       setTimeout(() => {
         loadNextPuzzle();
       }, 1500);
     } else {
-      setMessage("❌ Try again");
+      setMessage("❌ Try again.");
+
+      await saveAttempt(puzzle, false, 0);
 
       setTimeout(() => {
         setGame(new Chess(puzzle.fen));
@@ -116,65 +130,55 @@ export default function PuzzleTrainer() {
         <h1>Uni-Mates Puzzle Trainer</h1>
         <p>Solve tactical puzzles and improve your chess calculation.</p>
 
-        <div
-          style={{
-            background: "white",
-            padding: "24px",
-            borderRadius: "16px",
-            marginTop: "20px",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h2>{puzzle.title}</h2>
+        <h2>{puzzle.title}</h2>
 
-          <p>
-            <strong>Theme:</strong> {puzzle.theme}
-          </p>
+        <p>
+          <strong>Theme:</strong> {puzzle.theme}
+        </p>
 
-          <p>
-            <strong>Difficulty:</strong> {puzzle.difficulty}
-          </p>
+        <p>
+          <strong>Difficulty:</strong> {puzzle.difficulty}
+        </p>
 
-          <p>
-            <strong>Score:</strong> {score}
-          </p>
+        <p>
+          <strong>Score:</strong> {score}
+        </p>
 
-          <div style={{ width: "520px", maxWidth: "100%", marginTop: "20px" }}>
-            <Chessboard
-              position={game.fen()}
-              onPieceDrop={onDrop}
-              boardWidth={500}
-            />
-          </div>
+        <div style={{ width: "520px", maxWidth: "100%", marginTop: "20px" }}>
+          <Chessboard
+            position={game.fen()}
+            onPieceDrop={onDrop}
+            boardWidth={500}
+          />
+        </div>
 
-          {message && (
-            <p
-              style={{
-                marginTop: "18px",
-                fontSize: "20px",
-                fontWeight: "bold",
-              }}
-            >
-              {message}
-            </p>
-          )}
-
-          <button
-            onClick={loadNextPuzzle}
+        {message && (
+          <p
             style={{
-              marginTop: "16px",
-              background: "#2563eb",
-              color: "white",
-              padding: "10px 18px",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
+              marginTop: "18px",
+              fontSize: "20px",
               fontWeight: "bold",
             }}
           >
-            Next Puzzle
-          </button>
-        </div>
+            {message}
+          </p>
+        )}
+
+        <button
+          onClick={loadNextPuzzle}
+          style={{
+            marginTop: "16px",
+            background: "#2563eb",
+            color: "white",
+            padding: "10px 18px",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          Next Puzzle
+        </button>
       </div>
     </Shell>
   );
