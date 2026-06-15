@@ -30,17 +30,38 @@ export default function CoursesPage() {
           key={course.id}
           style={{
             border: "1px solid #ddd",
-            padding: "15px",
-            borderRadius: "10px",
-            marginBottom: "15px",
+            padding: "20px",
+            borderRadius: "12px",
+            marginBottom: "20px",
             background: "white",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
           }}
         >
           <h2>{course.title}</h2>
+
           <p>
-            <strong>Category:</strong> {course.category}
+            <strong>Level:</strong> {course.level || "Not set"}
           </p>
+
+          <p>
+            <strong>Description:</strong>
+          </p>
+
           <p>{course.description}</p>
+
+          <button
+            style={{
+              padding: "10px 20px",
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              marginTop: "10px",
+            }}
+          >
+            Enroll Now
+          </button>
         </div>
       ))}
     </Shell>
