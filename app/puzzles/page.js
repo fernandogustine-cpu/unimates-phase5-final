@@ -54,11 +54,13 @@ export default function PuzzleTrainer() {
         puzzle_id: puzzle.id,
         submitted_answer: submittedAnswer,
         is_correct: isCorrect,
+        attempted_at: new Date().toISOString(),
       },
     ]);
 
     if (error) {
       console.error("Attempt saving error:", error);
+      setMessage("Attempt was played, but saving failed.");
     }
   }
 
@@ -125,7 +127,10 @@ export default function PuzzleTrainer() {
 
   if (puzzles.length === 0) {
     return (
-      <Shell title="Puzzles" subtitle="Coach Fernando training system powered by Supabase.">
+      <Shell
+        title="Puzzles"
+        subtitle="Coach Fernando training system powered by Supabase."
+      >
         <h1>Uni-Mates Puzzle Trainer</h1>
         <p>Loading puzzles...</p>
       </Shell>
@@ -135,16 +140,27 @@ export default function PuzzleTrainer() {
   const puzzle = puzzles[currentIndex];
 
   return (
-    <Shell title="Puzzles" subtitle="Coach Fernando training system powered by Supabase.">
+    <Shell
+      title="Puzzles"
+      subtitle="Coach Fernando training system powered by Supabase."
+    >
       <div style={{ maxWidth: "900px" }}>
         <h1>Uni-Mates Puzzle Trainer</h1>
         <p>Solve tactical puzzles and improve your chess calculation.</p>
 
         <h2>{puzzle.title}</h2>
 
-        <p><strong>Theme:</strong> {puzzle.theme}</p>
-        <p><strong>Difficulty:</strong> {puzzle.difficulty}</p>
-        <p><strong>Score:</strong> {score}</p>
+        <p>
+          <strong>Theme:</strong> {puzzle.theme}
+        </p>
+
+        <p>
+          <strong>Difficulty:</strong> {puzzle.difficulty}
+        </p>
+
+        <p>
+          <strong>Score:</strong> {score}
+        </p>
 
         <div style={{ width: "520px", maxWidth: "100%", marginTop: "20px" }}>
           <Chessboard
@@ -155,7 +171,13 @@ export default function PuzzleTrainer() {
         </div>
 
         {message && (
-          <p style={{ marginTop: "18px", fontSize: "20px", fontWeight: "bold" }}>
+          <p
+            style={{
+              marginTop: "18px",
+              fontSize: "20px",
+              fontWeight: "bold",
+            }}
+          >
             {message}
           </p>
         )}
