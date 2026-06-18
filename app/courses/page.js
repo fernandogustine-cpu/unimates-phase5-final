@@ -1,72 +1,102 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Shell from "../../components/Shell";
-import { supabase } from "../../lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    level: "",
+  });
 
   useEffect(() => {
-    loadCourses();
+    fetchCourses();
   }, []);
 
-  async function loadCourses() {
+  async function fetchCourses() {
     const { data, error } = await supabase
       .from("courses")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) {
-      setCourses(data || []);
+    if (!error) setCourses(data || []);
+  }
+
+  async function addCourse(e) {
+    e.preventDefault();
+
+    const { error } = await supabase.from("courses").insert({
+      title: form.title,
+      description: form.description,
+      level: form.level,
+    });
+
+    if (error) {
+      alert("Error adding course: " + error.message);
+      return;
     }
+
+    setForm({
+      title: "",
+      description: "",
+      level: "",
+    });
+
+    fetchCourses();
   }
 
   return (
-    <Shell title="Courses">
-      <div style={{ padding: "20px" }}>
-        <h1>Uni-Mates Chess Academy Courses</h1>
+    <div style={{ padding: "30px" }}>
+      <h1>Courses</h1>
+      <p>Coach Fernando course management system powered by Supabase.</p>
 
-        {courses.map((course) => (
-          <div
-            key={course.id}
-            style={{
-              background: "#fff",
-              padding: "20px",
-              marginBottom: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-            }}
-          >
-            <h2>{course.title}</h2>
+      <form onSubmit={addCourse} style={{ marginBottom: "30px" }}>
+        <input
+          placeholder="Course title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          required
+        />
 
-            <p>
-              <strong>Level:</strong>{" "}
-              {course.level || "Beginner"}
-            </p>
+        <input
+          placeholder="Description"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
 
-            <p>
-              <strong>Description:</strong>
-            </p>
+        <input
+          placeholder="Level e.g Beginner, Intermediate, Advanced"
+          value={form.level}
+          onChange={(e) => setForm({ ...form, level: e.target.value })}
+        />
 
-            <p>{course.description}</p>
+        <button type="submit">Add Course</button>
+      </form>
 
-            <button
-              style={{
-                marginTop: "10px",
-                background: "#2563eb",
-                color: "white",
-                border: "none",
-                padding: "10px 20px",
-                borderRadius: "8px",
-                cursor: "pointer"
-              }}
-            >
-              Enroll Now
-            </button>
-          </div>
-        ))}
-      </div>
-    </Shell>
+      {courses.map((course) => (
+        <div
+          key={course.id}
+          style={{
+            padding: "15px",
+            marginBottom: "10px",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+          }}
+        >
+          <h3>{course.title}</h3>
+          <p>{course.description}</p>
+          <p>
+            <strong>Level:</strong> {course.level || "N/A"}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
