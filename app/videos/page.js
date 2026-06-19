@@ -1,87 +1,162 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Shell from '../../components/Shell';
-import { supabase } from '../../lib/supabaseClient';
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-function getEmbedUrl(url) {
-  if (!url) return '';
-
-  if (url.includes('watch?v=')) {
-    return url.replace('watch?v=', 'embed/');
-  }
-
-  if (url.includes('youtu.be/')) {
-    const videoId = url.split('youtu.be/')[1];
-    return `https://www.youtube.com/embed/${videoId}`;
-  }
-
-  return url;
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    youtube_url: "",
+    category: "",
+  });
 
   useEffect(() => {
-    loadVideos();
+    fetchVideos();
   }, []);
 
-  async function loadVideos() {
+  async function fetchVideos() {
     const { data, error } = await supabase
-      .from('videos')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("videos")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    if (!error) {
-      setVideos(data || []);
+    if (!error) setVideos(data || []);
+  }
+
+  async function addVideo(e) {
+    e.preventDefault();
+
+    const { error } = await supabase.from("videos").insert({
+      title: form.title,
+      description: form.description,
+      youtube_url: form.youtube_url,
+      category: form.category,
+    });
+
+    if (error) {
+      alert("Error adding video: " + error.message);
+      return;
     }
+
+    setForm({
+      title: "",
+      description: "",
+      youtube_url: "",
+      category: "",
+    });
+
+    fetchVideos();
   }
 
   return (
-    <Shell title="Videos">
-      <h1>Uni-Mates Chess Academy Video Library</h1>
+    <div style={{ padding: "30px" }}>
+      <h1>Videos</h1>
+      <p>Coach Fernando video training library powered by Supabase.</p>
 
-      <p>
-        Watch training videos from Coach Fernando and improve your chess skills.
-      </p>
+      <form onSubmit={addVideo} style={{ marginBottom: "30px" }}>
+        <input
+          placeholder="Video title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          required
+          style={inputStyle}
+        />
 
-      {videos.map((video) => (
-        <div
-          key={video.id}
-          style={{
-            background: '#ffffff',
-            padding: '20px',
-            marginBottom: '25px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
-          }}
-        >
-          <h2>{video.title}</h2>
+        <input
+          placeholder="Description"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          style={inputStyle}
+        />
 
-          <p>
-            <strong>Level:</strong> {video.level}
-          </p>
+        <input
+          placeholder="YouTube or ChessFactor URL"
+          value={form.youtube_url}
+          onChange={(e) => setForm({ ...form, youtube_url: e.target.value })}
+          required
+          style={inputStyle}
+        />
 
-          <p>
-            <strong>Course:</strong> {video.course}
-          </p>
+        <input
+          placeholder="Category: Beginner, Tactics, Endgame, Openings"
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          style={inputStyle}
+        />
 
-          <p>{video.description}</p>
+        <button type="submit" style={buttonStyle}>
+          Add Video
+        </button>
+      </form>
 
-          <iframe
-            width="100%"
-            height="360"
-            src={getEmbedUrl(video.youtube_url)}
-            title={video.title}
-            frameBorder="0"
-            allowFullScreen
-            style={{
-              borderRadius: '10px',
-              marginTop: '15px'
-            }}
-          />
-        </div>
-      ))}
-    </Shell>
+      <div>
+        {videos.map((video) => (
+          <div key={video.id} style={cardStyle}>
+            <h2>{video.title}</h2>
+
+            <p>
+              <strong>Category:</strong> {video.category || "General"}
+            </p>
+
+            <p>
+              <strong>Description:</strong>{" "}
+              {video.description || "No description added yet."}
+            </p>
+
+            <a
+              href={video.youtube_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={linkStyle}
+            >
+              Watch Video
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
+
+const inputStyle = {
+  display: "block",
+  width: "100%",
+  padding: "12px",
+  marginBottom: "10px",
+  border: "1px solid #ccc",
+  borderRadius: "6px",
+};
+
+const buttonStyle = {
+  background: "#d89b00",
+  color: "black",
+  padding: "10px 18px",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "bold",
+};
+
+const cardStyle = {
+  padding: "20px",
+  marginBottom: "15px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+  background: "white",
+};
+
+const linkStyle = {
+  display: "inline-block",
+  background: "#2563eb",
+  color: "white",
+  padding: "10px 15px",
+  borderRadius: "6px",
+  textDecoration: "none",
+};
