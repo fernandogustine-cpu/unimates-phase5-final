@@ -8,6 +8,22 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+function getYouTubeEmbedUrl(url) {
+  if (!url) return "";
+
+  if (url.includes("youtube.com/embed/")) return url;
+
+  let videoId = "";
+
+  if (url.includes("watch?v=")) {
+    videoId = url.split("watch?v=")[1].split("&")[0];
+  } else if (url.includes("youtu.be/")) {
+    videoId = url.split("youtu.be/")[1].split("?")[0];
+  }
+
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+}
+
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
   const [form, setForm] = useState({
@@ -15,6 +31,8 @@ export default function VideosPage() {
     description: "",
     youtube_url: "",
     category: "",
+    level: "",
+    course: "",
   });
 
   useEffect(() => {
@@ -27,7 +45,12 @@ export default function VideosPage() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) setVideos(data || []);
+    if (error) {
+      alert("Error loading videos: " + error.message);
+      return;
+    }
+
+    setVideos(data || []);
   }
 
   async function addVideo(e) {
@@ -38,6 +61,8 @@ export default function VideosPage() {
       description: form.description,
       youtube_url: form.youtube_url,
       category: form.category,
+      level: form.level,
+      course: form.course,
     });
 
     if (error) {
@@ -50,6 +75,8 @@ export default function VideosPage() {
       description: "",
       youtube_url: "",
       category: "",
+      level: "",
+      course: "",
     });
 
     fetchVideos();
@@ -61,66 +88,50 @@ export default function VideosPage() {
       <p>Coach Fernando video training library powered by Supabase.</p>
 
       <form onSubmit={addVideo} style={{ marginBottom: "30px" }}>
-        <input
-          placeholder="Video title"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          required
-          style={inputStyle}
-        />
+        <input placeholder="Video title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required style={inputStyle} />
+        <input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={inputStyle} />
+        <input placeholder="YouTube URL" value={form.youtube_url} onChange={(e) => setForm({ ...form, youtube_url: e.target.value })} required style={inputStyle} />
+        <input placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={inputStyle} />
+        <input placeholder="Level: Beginner, Intermediate, Advanced" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} style={inputStyle} />
+        <input placeholder="Course" value={form.course} onChange={(e) => setForm({ ...form, course: e.target.value })} style={inputStyle} />
 
-        <input
-          placeholder="Description"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          style={inputStyle}
-        />
-
-        <input
-          placeholder="YouTube or ChessFactor URL"
-          value={form.youtube_url}
-          onChange={(e) => setForm({ ...form, youtube_url: e.target.value })}
-          required
-          style={inputStyle}
-        />
-
-        <input
-          placeholder="Category: Beginner, Tactics, Endgame, Openings"
-          value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
-          style={inputStyle}
-        />
-
-        <button type="submit" style={buttonStyle}>
-          Add Video
-        </button>
+        <button type="submit" style={buttonStyle}>Add Video</button>
       </form>
 
-      <div>
-        {videos.map((video) => (
+      {videos.map((video) => {
+        const embedUrl = getYouTubeEmbedUrl(video.youtube_url);
+
+        return (
           <div key={video.id} style={cardStyle}>
             <h2>{video.title}</h2>
+            <p><strong>Level:</strong> {video.level || "N/A"}</p>
+            <p><strong>Course:</strong> {video.course || "N/A"}</p>
+            <p>{video.description || "No description added."}</p>
 
-            <p>
-              <strong>Category:</strong> {video.category || "General"}
-            </p>
-
-            <p>
-              <strong>Description:</strong>{" "}
-              {video.description || "No description added yet."}
-            </p>
+            {embedUrl && (
+              <iframe
+                width="100%"
+                height="400"
+                src={embedUrl}
+                title={video.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                style={{ borderRadius: "12px", marginTop: "15px" }}
+              ></iframe>
+            )}
 
             <a
               href={video.youtube_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={linkStyle}
+              style={youtubeButtonStyle}
             >
-              Watch Video
+              Watch on YouTube
             </a>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -130,33 +141,35 @@ const inputStyle = {
   width: "100%",
   padding: "12px",
   marginBottom: "10px",
+  borderRadius: "8px",
   border: "1px solid #ccc",
-  borderRadius: "6px",
 };
 
 const buttonStyle = {
-  background: "#d89b00",
-  color: "black",
+  background: "#d99a00",
+  color: "white",
   padding: "10px 18px",
   border: "none",
-  borderRadius: "6px",
+  borderRadius: "8px",
+  fontWeight: "bold",
   cursor: "pointer",
+};
+
+const youtubeButtonStyle = {
+  display: "inline-block",
+  marginTop: "12px",
+  background: "#cc0000",
+  color: "white",
+  padding: "10px 16px",
+  borderRadius: "8px",
+  textDecoration: "none",
   fontWeight: "bold",
 };
 
 const cardStyle = {
-  padding: "20px",
-  marginBottom: "15px",
-  border: "1px solid #ddd",
-  borderRadius: "10px",
   background: "white",
-};
-
-const linkStyle = {
-  display: "inline-block",
-  background: "#2563eb",
-  color: "white",
-  padding: "10px 15px",
-  borderRadius: "6px",
-  textDecoration: "none",
+  padding: "25px",
+  borderRadius: "12px",
+  marginBottom: "30px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
 };
