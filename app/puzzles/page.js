@@ -1,203 +1,205 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Chessboard } from "react-chessboard";
-import { Chess } from "chess.js";
 import { createClient } from "@supabase/supabase-js";
-import Shell from "../../components/Shell";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export default function PuzzleTrainer() {
+export default function PuzzlesPage() {
   const [puzzles, setPuzzles] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [game, setGame] = useState(new Chess());
-  const [message, setMessage] = useState("");
-  const [score, setScore] = useState(0);
+  const [form, setForm] = useState({
+    title: "",
+    fen: "",
+    question: "",
+    answer: "",
+    theme: "",
+    difficulty: "",
+  });
 
   useEffect(() => {
-    loadPuzzles();
+    fetchPuzzles();
   }, []);
 
-  async function loadPuzzles() {
+  async function fetchPuzzles() {
     const { data, error } = await supabase
       .from("puzzles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Puzzle loading error:", error);
-      setMessage("Could not load puzzles.");
-      return;
-    }
-
-    if (data && data.length > 0) {
-      setPuzzles(data);
-      setCurrentIndex(0);
-      setGame(new Chess(data[0].fen));
-    }
+    if (!error) setPuzzles(data || []);
   }
 
-  function normalizeMove(move) {
-    return String(move || "")
-      .toLowerCase()
-      .replace(/[+#x=]/g, "")
-      .trim();
-  }
+  async function addPuzzle(e) {
+    e.preventDefault();
 
-  async function saveAttempt(puzzle, submittedAnswer, isCorrect) {
-    const { error } = await supabase.from("puzzle_attempts").insert([
-      {
-        puzzle_id: puzzle.id,
-        submitted_answer: submittedAnswer,
-        is_correct: isCorrect,
-        attempted_at: new Date().toISOString(),
-      },
-    ]);
-
-    if (error) {
-      console.error("Attempt saving error:", error);
-      setMessage("Attempt was played, but saving failed.");
-    }
-  }
-
-  async function onDrop(sourceSquare, targetSquare) {
-    const puzzle = puzzles[currentIndex];
-    if (!puzzle) return false;
-
-    const tempGame = new Chess(game.fen());
-
-    const move = tempGame.move({
-      from: sourceSquare,
-      to: targetSquare,
-      promotion: "q",
+    const { error } = await supabase.from("puzzles").insert({
+      title: form.title,
+      fen: form.fen,
+      question: form.question,
+      answer: form.answer,
+      theme: form.theme,
+      difficulty: Number(form.difficulty) || 1,
     });
 
-    if (!move) return false;
-
-    const playedMove = normalizeMove(move.san);
-    const correctMove = normalizeMove(puzzle.answer);
-
-    const isCorrect =
-      playedMove === correctMove ||
-      normalizeMove(move.from + move.to) === correctMove ||
-      move.to === correctMove.slice(-2);
-
-    if (isCorrect) {
-      setGame(tempGame);
-      setScore((oldScore) => oldScore + 10);
-      setMessage("✅ Correct! Well done.");
-
-      await saveAttempt(puzzle, move.san, true);
-
-      setTimeout(() => {
-        loadNextPuzzle();
-      }, 1500);
-    } else {
-      setMessage("❌ Try again.");
-
-      await saveAttempt(puzzle, move.san, false);
-
-      setTimeout(() => {
-        setGame(new Chess(puzzle.fen));
-        setMessage("");
-      }, 1000);
-    }
-
-    return true;
-  }
-
-  function loadNextPuzzle() {
-    const nextIndex = currentIndex + 1;
-
-    if (nextIndex >= puzzles.length) {
-      setMessage("🎉 Well done! You completed all puzzles.");
+    if (error) {
+      alert("Error adding puzzle: " + error.message);
       return;
     }
 
-    const nextPuzzle = puzzles[nextIndex];
+    setForm({
+      title: "",
+      fen: "",
+      question: "",
+      answer: "",
+      theme: "",
+      difficulty: "",
+    });
 
-    setCurrentIndex(nextIndex);
-    setGame(new Chess(nextPuzzle.fen));
-    setMessage("");
+    fetchPuzzles();
   }
-
-  if (puzzles.length === 0) {
-    return (
-      <Shell
-        title="Puzzles"
-        subtitle="Coach Fernando training system powered by Supabase."
-      >
-        <h1>Uni-Mates Puzzle Trainer</h1>
-        <p>Loading puzzles...</p>
-      </Shell>
-    );
-  }
-
-  const puzzle = puzzles[currentIndex];
 
   return (
-    <Shell
-      title="Puzzles"
-      subtitle="Coach Fernando training system powered by Supabase."
-    >
-      <div style={{ maxWidth: "900px" }}>
-        <h1>Uni-Mates Puzzle Trainer</h1>
-        <p>Solve tactical puzzles and improve your chess calculation.</p>
+    <div style={{ padding: "30px" }}>
+      <h1>Puzzle Trainer</h1>
+      <p>Coach Fernando puzzle training system powered by Supabase.</p>
 
-        <h2>{puzzle.title}</h2>
+      <form onSubmit={addPuzzle} style={{ marginBottom: "30px" }}>
+        <input
+          placeholder="Puzzle title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          required
+          style={inputStyle}
+        />
 
-        <p>
-          <strong>Theme:</strong> {puzzle.theme}
-        </p>
+        <input
+          placeholder="FEN position"
+          value={form.fen}
+          onChange={(e) => setForm({ ...form, fen: e.target.value })}
+          required
+          style={inputStyle}
+        />
 
-        <p>
-          <strong>Difficulty:</strong> {puzzle.difficulty}
-        </p>
+        <input
+          placeholder="Question"
+          value={form.question}
+          onChange={(e) => setForm({ ...form, question: e.target.value })}
+          required
+          style={inputStyle}
+        />
 
-        <p>
-          <strong>Score:</strong> {score}
-        </p>
+        <input
+          placeholder="Correct answer e.g. Re8+"
+          value={form.answer}
+          onChange={(e) => setForm({ ...form, answer: e.target.value })}
+          required
+          style={inputStyle}
+        />
 
-        <div style={{ width: "520px", maxWidth: "100%", marginTop: "20px" }}>
-          <Chessboard
-            position={game.fen()}
-            onPieceDrop={onDrop}
-            boardWidth={500}
-          />
-        </div>
+        <input
+          placeholder="Theme e.g. Back Rank Mate"
+          value={form.theme}
+          onChange={(e) => setForm({ ...form, theme: e.target.value })}
+          style={inputStyle}
+        />
 
-        {message && (
-          <p
-            style={{
-              marginTop: "18px",
-              fontSize: "20px",
-              fontWeight: "bold",
-            }}
-          >
-            {message}
-          </p>
-        )}
+        <input
+          placeholder="Difficulty 1-5"
+          value={form.difficulty}
+          onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
+          style={inputStyle}
+        />
 
-        <button
-          onClick={loadNextPuzzle}
-          style={{
-            marginTop: "16px",
-            background: "#2563eb",
-            color: "white",
-            padding: "10px 18px",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Next Puzzle
+        <button type="submit" style={buttonStyle}>
+          Add Puzzle
         </button>
-      </div>
-    </Shell>
+      </form>
+
+      {puzzles.map((puzzle) => (
+        <PuzzleCard key={puzzle.id} puzzle={puzzle} />
+      ))}
+    </div>
   );
 }
+
+function PuzzleCard({ puzzle }) {
+  const [answer, setAnswer] = useState("");
+  const [message, setMessage] = useState("");
+
+  function checkAnswer() {
+    const studentAnswer = answer.trim().toLowerCase();
+    const correctAnswer = puzzle.answer.trim().toLowerCase();
+
+    if (studentAnswer === correctAnswer) {
+      setMessage("✅ Correct! Well done.");
+    } else {
+      setMessage("❌ Try again.");
+    }
+  }
+
+  return (
+    <div style={cardStyle}>
+      <h2>{puzzle.title}</h2>
+
+      <p>
+        <strong>Theme:</strong> {puzzle.theme || "N/A"}
+      </p>
+
+      <p>
+        <strong>Difficulty:</strong> {puzzle.difficulty || 1}
+      </p>
+
+      <p>
+        <strong>FEN:</strong> {puzzle.fen}
+      </p>
+
+      <p>
+        <strong>Question:</strong> {puzzle.question}
+      </p>
+
+      <input
+        placeholder="Enter your move"
+        value={answer}
+        onChange={(e) => setAnswer(e.target.value)}
+        style={inputStyle}
+      />
+
+      <button onClick={checkAnswer} style={buttonStyle}>
+        Submit Answer
+      </button>
+
+      {message && <p style={{ fontWeight: "bold" }}>{message}</p>}
+    </div>
+  );
+}
+
+const inputStyle = {
+  display: "block",
+  width: "100%",
+  padding: "12px",
+  marginBottom: "10px",
+  borderRadius: "6px",
+  border: "1px solid #ccc",
+};
+
+const buttonStyle = {
+  background: "#d4a017",
+  color: "black",
+  border: "none",
+  padding: "10px 18px",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  marginBottom: "10px",
+};
+
+const cardStyle = {
+  padding: "20px",
+  marginBottom: "20px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+  background: "white",
+};
