@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { createClient } from "@supabase/supabase-js";
-import Shell from "../components/Shell";
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -159,7 +159,7 @@ export default function PuzzleTrainer() {
       <Shell title="Puzzle Trainer" subtitle="Coach Fernando training system">
         <h1>Puzzle Trainer</h1>
         <p>No puzzles found. Add puzzles in Supabase first.</p>
-      </Shell>
+      
     );
   }
 
@@ -221,6 +221,6 @@ export default function PuzzleTrainer() {
           Next Puzzle
         </button>
       </div>
-    </Shell>
+    
   );
 }
