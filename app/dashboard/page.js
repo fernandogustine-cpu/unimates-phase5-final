@@ -19,8 +19,7 @@ export default function CoachDashboard() {
   async function loadDashboard() {
     const { data, error } = await supabase
       .from("puzzle_attempts")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
 
     if (error) {
       alert("Dashboard error: " + error.message);
@@ -28,7 +27,7 @@ export default function CoachDashboard() {
     }
 
     const rows = data || [];
-    setAttempts(rows.slice(0, 10));
+    setAttempts(rows.slice(-10).reverse());
 
     const grouped = {};
 
