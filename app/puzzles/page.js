@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Chess } from "chess.js";
-import { Chessboard } from "react-chessboard";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -11,212 +9,198 @@ const supabase = createClient(
 );
 
 export default function PuzzleTrainer() {
+  const [students, setStudents] = useState([]);
+  const [studentName, setStudentName] = useState("");
   const [puzzles, setPuzzles] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [game, setGame] = useState(new Chess());
+  const [currentPuzzle, setCurrentPuzzle] = useState(null);
+  const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [bestStreak, setBestStreak] = useState(0);
-
-  const studentName = "Guest Student";
 
   useEffect(() => {
+    loadStudents();
     loadPuzzles();
   }, []);
+
+  async function loadStudents() {
+    const { data, error } = await supabase
+      .from("students")
+      .select("full_name")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      alert("Student loading error: " + error.message);
+      return;
+    }
+
+    setStudents(data || []);
+  }
 
   async function loadPuzzles() {
     const { data, error } = await supabase
       .from("puzzles")
-      .select("*")
-      .order("is_puzzle_of_day", { ascending: false })
-      .order("rating", { ascending: true });
+      .select("*");
 
     if (error) {
-      setMessage("Could not load puzzles: " + error.message);
+      alert("Puzzle loading error: " + error.message);
       return;
     }
 
+    setPuzzles(data || []);
     if (data && data.length > 0) {
-      setPuzzles(data);
-      setCurrentIndex(0);
-      setGame(new Chess(data[0].fen));
+      setCurrentPuzzle(data[0]);
     }
   }
 
-  function cleanMove(move) {
-    return String(move || "")
-      .toLowerCase()
-      .replace(/[+#x!?]/g, "")
-      .trim();
-  }
+  async function checkAnswer() {
+    if (!studentName) {
+      alert("Please select a student first.");
+      return;
+    }
 
-  async function saveAttempt(puzzle, movePlayed, isCorrect) {
-    await supabase.from("puzzle_attempts").insert({
-      puzzle_id: puzzle.id,
+    if (!currentPuzzle) {
+      alert("No puzzle loaded.");
+      return;
+    }
+
+    const correct =
+      answer.trim().toLowerCase() ===
+      String(currentPuzzle.solution).trim().toLowerCase();
+
+    const { error } = await supabase.from("puzzle_attempts").insert({
       student_name: studentName,
-      move_played: movePlayed,
-      is_correct: isCorrect,
+      puzzle_id: currentPuzzle.id,
+      submitted_answer: answer,
+      is_correct: correct,
     });
 
-    const { data: existing } = await supabase
-      .from("student_puzzle_stats")
-      .select("*")
-      .eq("student_name", studentName)
-      .maybeSingle();
-
-    if (!existing) {
-      await supabase.from("student_puzzle_stats").insert({
-        student_name: studentName,
-        total_attempts: 1,
-        correct_attempts: isCorrect ? 1 : 0,
-        current_streak: isCorrect ? 1 : 0,
-        best_streak: isCorrect ? 1 : 0,
-        total_score: isCorrect ? 10 : 0,
-      });
-
-      setStreak(isCorrect ? 1 : 0);
-      setBestStreak(isCorrect ? 1 : 0);
-    } else {
-      const newStreak = isCorrect ? existing.current_streak + 1 : 0;
-      const newBestStreak = Math.max(existing.best_streak, newStreak);
-
-      await supabase
-        .from("student_puzzle_stats")
-        .update({
-          total_attempts: existing.total_attempts + 1,
-          correct_attempts: existing.correct_attempts + (isCorrect ? 1 : 0),
-          current_streak: newStreak,
-          best_streak: newBestStreak,
-          total_score: existing.total_score + (isCorrect ? 10 : 0),
-          last_played: new Date().toISOString(),
-        })
-        .eq("student_name", studentName);
-
-      setStreak(newStreak);
-      setBestStreak(newBestStreak);
+    if (error) {
+      alert("Error saving attempt: " + error.message);
+      return;
     }
-  }
 
-  async function onDrop(sourceSquare, targetSquare) {
-    const puzzle = puzzles[currentIndex];
-    if (!puzzle) return false;
-
-    const newGame = new Chess(game.fen());
-
-    const move = newGame.move({
-      from: sourceSquare,
-      to: targetSquare,
-      promotion: "q",
-    });
-
-    if (!move) return false;
-
-    const playedSAN = cleanMove(move.san);
-    const playedUCI = cleanMove(move.from + move.to);
-    const correctAnswer = cleanMove(puzzle.answer || puzzle.solution);
-
-    const isCorrect =
-      playedSAN === correctAnswer ||
-      playedUCI === correctAnswer;
-
-    if (isCorrect) {
-      setGame(newGame);
-      setScore((oldScore) => oldScore + 10);
+    if (correct) {
+      setScore(score + 10);
       setMessage("✅ Correct! Well done.");
-
-      await saveAttempt(puzzle, move.san, true);
-
-      setTimeout(() => {
-        nextPuzzle();
-      }, 1500);
     } else {
-      setMessage("❌ Incorrect. Try again.");
-      await saveAttempt(puzzle, move.san, false);
-
-      setTimeout(() => {
-        setGame(new Chess(puzzle.fen));
-      }, 1000);
+      setMessage("❌ Incorrect. Try the next one.");
     }
 
-    return true;
+    setAnswer("");
+    nextPuzzle();
   }
 
   function nextPuzzle() {
-    const nextIndex = currentIndex + 1;
+    if (puzzles.length === 0) return;
 
-    if (nextIndex >= puzzles.length) {
-      setMessage("🎉 Well done! You completed all puzzles.");
-      return;
-    }
-
-    const nextPuzzle = puzzles[nextIndex];
-    setCurrentIndex(nextIndex);
-    setGame(new Chess(nextPuzzle.fen));
-    setMessage("");
+    const index = puzzles.findIndex((p) => p.id === currentPuzzle?.id);
+    const nextIndex = (index + 1) % puzzles.length;
+    setCurrentPuzzle(puzzles[nextIndex]);
   }
-
-  if (puzzles.length === 0) {
-    return (
-      <div style={pageStyle}>
-        <h1>Uni-Mates Puzzle Trainer</h1>
-        <p>No puzzles found. Add puzzles in Supabase first.</p>
-        {message && <p>{message}</p>}
-      </div>
-    );
-  }
-
-  const puzzle = puzzles[currentIndex];
 
   return (
-    <div style={pageStyle}>
+    <div style={{ padding: "30px" }}>
       <h1>Uni-Mates Puzzle Trainer</h1>
 
-      {puzzle.is_puzzle_of_day && (
-        <p style={{ fontWeight: "bold", color: "#d97706" }}>
-          ⭐ Puzzle of the Day
-        </p>
-      )}
+      <p>Student: {studentName || "Not selected"}</p>
+      <p>Score: {score}</p>
 
-      <h2>{puzzle.title || "Training Puzzle"}</h2>
+      <div style={{ marginBottom: "20px" }}>
+        <label><strong>Select Student</strong></label>
+        <br />
 
-      <p><strong>Theme:</strong> {puzzle.theme || "Tactics"}</p>
-      <p><strong>Difficulty:</strong> {puzzle.difficulty || "Beginner"}</p>
-      <p><strong>Rating:</strong> {puzzle.rating || "800"}</p>
-      <p><strong>Score:</strong> {score}</p>
-      <p><strong>Current Streak:</strong> {streak}</p>
-      <p><strong>Best Streak:</strong> {bestStreak}</p>
+        <select
+          value={studentName}
+          onChange={(e) => setStudentName(e.target.value)}
+          style={inputStyle}
+        >
+          <option value="">Choose Student</option>
 
-      <div style={{ width: "520px", maxWidth: "100%" }}>
-        <Chessboard
-          position={game.fen()}
-          onPieceDrop={onDrop}
-          boardWidth={500}
-        />
+          {students.map((student) => (
+            <option key={student.full_name} value={student.full_name}>
+              {student.full_name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {message && (
-        <p style={{ marginTop: "18px", fontSize: "20px", fontWeight: "bold" }}>
-          {message}
-        </p>
-      )}
+      {currentPuzzle ? (
+        <div style={cardStyle}>
+          <h2>{currentPuzzle.title || "Chess Puzzle"}</h2>
 
-      <button onClick={nextPuzzle} style={buttonStyle}>
-        Next Puzzle
-      </button>
+          <p>
+            <strong>Theme:</strong>{" "}
+            {currentPuzzle.theme || "Tactics"}
+          </p>
+
+          <p>
+            <strong>Difficulty:</strong>{" "}
+            {currentPuzzle.difficulty || "Training"}
+          </p>
+
+          <p>
+            <strong>FEN:</strong>{" "}
+            {currentPuzzle.fen || "No FEN added"}
+          </p>
+
+          <input
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Enter move, example: Bxc6"
+            style={inputStyle}
+          />
+
+          <br />
+
+          <button onClick={checkAnswer} style={buttonStyle}>
+            Submit Answer
+          </button>
+
+          <button onClick={nextPuzzle} style={secondaryButtonStyle}>
+            Next Puzzle
+          </button>
+
+          <p>{message}</p>
+        </div>
+      ) : (
+        <p>No puzzles found. Add puzzles in Supabase first.</p>
+      )}
     </div>
   );
 }
 
-const pageStyle = {
-  padding: "30px",
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  marginTop: "8px",
+  marginBottom: "10px",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+};
+
+const cardStyle = {
+  background: "#ffffff",
+  padding: "20px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+  marginTop: "20px",
 };
 
 const buttonStyle = {
-  marginTop: "16px",
+  background: "#16a34a",
+  color: "white",
+  padding: "10px 16px",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  marginRight: "10px",
+  fontWeight: "bold",
+};
+
+const secondaryButtonStyle = {
   background: "#2563eb",
   color: "white",
-  padding: "10px 18px",
+  padding: "10px 16px",
   border: "none",
   borderRadius: "8px",
   cursor: "pointer",
