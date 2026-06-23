@@ -1,77 +1,186 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 
-export default function StudentDashboard() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+export default function StudentPortal() {
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState("");
+  const [studentData, setStudentData] = useState(null);
+  const [homework, setHomework] = useState([]);
+  const [attempts, setAttempts] = useState([]);
 
   useEffect(() => {
-    loadProfile();
+    loadStudents();
   }, []);
 
-  async function loadProfile() {
-    const { data: userData } = await supabase.auth.getUser();
+  async function loadStudents() {
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .order("full_name", { ascending: true });
 
-    if (!userData?.user) {
-      window.location.href = "/login";
+    if (error) {
+      alert("Student loading error: " + error.message);
       return;
     }
 
-    const { data } = await supabase
-      .from("profiles")
+    setStudents(data || []);
+  }
+
+  async function openStudentPortal(name) {
+    setSelectedStudent(name);
+
+    const student = students.find((s) => s.full_name === name);
+    setStudentData(student || null);
+
+    const { data: homeworkData } = await supabase
+      .from("student_homework")
       .select("*")
-      .eq("auth_user_id", userData.user.id)
-      .single();
+      .eq("student_name", name);
 
-    setProfile(data);
-    setLoading(false);
+    setHomework(homeworkData || []);
+
+    const { data: attemptData } = await supabase
+      .from("puzzle_attempts")
+      .select("*")
+      .eq("student_name", name);
+
+    setAttempts(attemptData || []);
   }
 
-  if (loading) {
-    return <div style={{ padding: "20px" }}>Loading...</div>;
-  }
+  const totalAttempts = attempts.length;
+  const correctAttempts = attempts.filter((a) => a.is_correct === true).length;
+  const puzzleScore = correctAttempts * 10;
+  const accuracy =
+    totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Student Dashboard</h1>
+    <div style={{ padding: "30px" }}>
+      <h1>Uni-Mates Student Portal</h1>
+      <p>Students can view homework, puzzle scores, rating and progress.</p>
 
-      <div
-        style={{
-          border: "1px solid #ddd",
-          padding: "20px",
-          marginTop: "20px",
-          borderRadius: "8px",
-        }}
+      <select
+        value={selectedStudent}
+        onChange={(e) => openStudentPortal(e.target.value)}
+        style={inputStyle}
       >
-        <h2>{profile.full_name}</h2>
+        <option value="">Select Student</option>
 
-        <p>
-          <strong>Rating:</strong> {profile.rating}
-        </p>
+        {students.map((student) => (
+          <option key={student.id} value={student.full_name}>
+            {student.full_name}
+          </option>
+        ))}
+      </select>
 
-        <p>
-          <strong>Goal:</strong> {profile.goal}
-        </p>
-      </div>
+      {studentData && (
+        <>
+          <div style={cardStyle}>
+            <h2>{studentData.full_name}</h2>
+            <p><strong>Age:</strong> {studentData.age || "N/A"}</p>
+            <p><strong>School:</strong> {studentData.school || "N/A"}</p>
+            <p><strong>Rating:</strong> {studentData.rating || "N/A"}</p>
+            <p><strong>Coach:</strong> {studentData.coach_name || "Coach Fernando"}</p>
+          </div>
 
-      <div
-        style={{
-          border: "1px solid #ddd",
-          padding: "20px",
-          marginTop: "20px",
-          borderRadius: "8px",
-        }}
-      >
-        <h2>Training Progress</h2>
+          <h2>My Puzzle Progress</h2>
 
-        <p>Lessons Completed: 2</p>
+          <div style={gridStyle}>
+            <div style={smallCardStyle}>
+              <h3>Total Score</h3>
+              <p>{puzzleScore}</p>
+            </div>
 
-        <p>Homework Completed: 0</p>
+            <div style={smallCardStyle}>
+              <h3>Total Attempts</h3>
+              <p>{totalAttempts}</p>
+            </div>
 
-        <p>Puzzle Score: 0</p>
-      </div>
+            <div style={smallCardStyle}>
+              <h3>Correct Answers</h3>
+              <p>{correctAttempts}</p>
+            </div>
+
+            <div style={smallCardStyle}>
+              <h3>Accuracy</h3>
+              <p>{accuracy}%</p>
+            </div>
+          </div>
+
+          <h2>My Homework</h2>
+
+          {homework.length === 0 ? (
+            <p>No homework assigned yet.</p>
+          ) : (
+            homework.map((item) => (
+              <div key={item.id} style={cardStyle}>
+                <h3>{item.title || item.homework_title}</h3>
+                <p>
+                  <strong>Description:</strong>{" "}
+                  {item.description || item.homework_description || "No description"}
+                </p>
+                <p><strong>Due Date:</strong> {item.due_date || "No date"}</p>
+                <p><strong>Status:</strong> {item.status || "Pending"}</p>
+              </div>
+            ))
+          )}
+
+          <h2>Recent Puzzle Attempts</h2>
+
+          {attempts.length === 0 ? (
+            <p>No puzzle attempts yet.</p>
+          ) : (
+            attempts.slice(-10).reverse().map((attempt) => (
+              <div key={attempt.id} style={cardStyle}>
+                <p>
+                  <strong>Answer:</strong>{" "}
+                  {attempt.submitted_answer || attempt.move_played || "N/A"}
+                </p>
+                <p>
+                  <strong>Correct:</strong>{" "}
+                  {attempt.is_correct ? "Yes" : "No"}
+                </p>
+              </div>
+            ))
+          )}
+        </>
+      )}
     </div>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "20px",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+};
+
+const cardStyle = {
+  background: "#ffffff",
+  padding: "18px",
+  marginBottom: "18px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+};
+
+const smallCardStyle = {
+  background: "#f9fafb",
+  padding: "16px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+};
+
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: "16px",
+  marginBottom: "25px",
+};
