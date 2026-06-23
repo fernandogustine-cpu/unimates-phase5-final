@@ -1,39 +1,54 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email,setEmail] = useState('');
-  const [password,setPassword] = useState('');
-  const [message,setMessage] = useState('');
+  const [name, setName] = useState("");
 
-  async function signIn(e) {
+  function loginStudent(e) {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return setMessage(error.message);
-    router.push('/dashboard');
-  }
 
-  async function signUp(e) {
-    e.preventDefault();
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) return setMessage(error.message);
-    setMessage('Account created. Check email if confirmation is enabled.');
+    if (!name) {
+      alert("Please enter your name.");
+      return;
+    }
+
+    localStorage.setItem("student_name", name);
+    window.location.href = "/student";
   }
 
   return (
-    <main className="main">
-      <div className="form">
-        <h1>Uni-Mates Login</h1>
-        <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-        <input placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-        <button onClick={signIn}>Login</button>
-        <button onClick={signUp}>Create Student Account</button>
-        {message && <p className="notice">{message}</p>}
-      </div>
-    </main>
+    <div style={{ padding: "40px" }}>
+      <h1>Uni-Mates Student Login</h1>
+      <p>Enter your full name exactly as Coach Fernando added it.</p>
+
+      <form onSubmit={loginStudent}>
+        <input
+          placeholder="Example: Kganya Sehularo"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "12px",
+            marginBottom: "15px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+          }}
+        />
+
+        <button
+          style={{
+            background: "#2563eb",
+            color: "white",
+            padding: "10px 18px",
+            border: "none",
+            borderRadius: "8px",
+            fontWeight: "bold",
+          }}
+        >
+          Login
+        </button>
+      </form>
+    </div>
   );
 }
