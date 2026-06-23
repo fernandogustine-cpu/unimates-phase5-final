@@ -1,43 +1,143 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Shell from '../../components/Shell';
-import { supabase } from '../../lib/supabaseClient';
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function TournamentsPage() {
-  const [items,setItems] = useState([]);
-  const [form,setForm] = useState({ name:'', venue:'', start_date:'' });
+  const [tournaments, setTournaments] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    date: "",
+    venue: "",
+    status: "Upcoming",
+  });
 
-  useEffect(()=>{ loadItems(); },[]);
+  useEffect(() => {
+    loadTournaments();
+  }, []);
 
-  async function loadItems(){
-    const { data, error } = await supabase.from('tournaments').select('*').order('start_date', { ascending: false });
-    if (!error) setItems(data || []);
+  async function loadTournaments() {
+    const { data, error } = await supabase
+      .from("tournaments")
+      .select("*");
+
+    if (error) {
+      alert("Error loading tournaments: " + error.message);
+      return;
+    }
+
+    setTournaments(data || []);
   }
 
-  async function addItem(e){
+  async function addTournament(e) {
     e.preventDefault();
-    const { error } = await supabase.from('tournaments').insert([form]);
-    if (error) return alert(error.message);
-    setForm({ name:'', venue:'', start_date:'' });
-    loadItems();
+
+    if (!form.title || !form.date || !form.venue) {
+      alert("Please complete title, date and venue.");
+      return;
+    }
+
+    const { error } = await supabase.from("tournaments").insert(form);
+
+    if (error) {
+      alert("Error adding tournament: " + error.message);
+      return;
+    }
+
+    setForm({
+      title: "",
+      date: "",
+      venue: "",
+      status: "Upcoming",
+    });
+
+    loadTournaments();
   }
 
   return (
-    <Shell title="Tournaments">
-      <form className="form" onSubmit={addItem}>
-        <input placeholder="Tournament name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} />
-        <input placeholder="Venue" value={form.venue} onChange={e=>setForm({...form,venue:e.target.value})} />
-        <input type="date" value={form.start_date} onChange={e=>setForm({...form,start_date:e.target.value})} />
-        <button>Add Tournament</button>
+    <div style={{ padding: "30px" }}>
+      <h1>🏆 Uni-Mates Tournament Calendar</h1>
+      <p>Add and view upcoming chess tournaments.</p>
+
+      <form onSubmit={addTournament} style={cardStyle}>
+        <input
+          placeholder="Tournament title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          type="date"
+          value={form.date}
+          onChange={(e) => setForm({ ...form, date: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Venue"
+          value={form.venue}
+          onChange={(e) => setForm({ ...form, venue: e.target.value })}
+          style={inputStyle}
+        />
+
+        <select
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          style={inputStyle}
+        >
+          <option>Upcoming</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+
+        <button style={buttonStyle}>Add Tournament</button>
       </form>
-      <div className="grid">
-        {items.map(item => (
-          <div className="card" key={item.id}>
-            <h3>{item.name}</h3><p>{item.venue}</p><p>{item.start_date}</p>
+
+      <h2>Upcoming Events</h2>
+
+      {tournaments.length === 0 ? (
+        <p>No tournaments added yet.</p>
+      ) : (
+        tournaments.map((event) => (
+          <div key={event.id} style={cardStyle}>
+            <h3>{event.title}</h3>
+            <p><strong>Date:</strong> {event.date}</p>
+            <p><strong>Venue:</strong> {event.venue}</p>
+            <p><strong>Status:</strong> {event.status}</p>
           </div>
-        ))}
-      </div>
-    </Shell>
+        ))
+      )}
+    </div>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "10px",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+};
+
+const cardStyle = {
+  background: "#fff",
+  padding: "18px",
+  marginBottom: "18px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+};
+
+const buttonStyle = {
+  background: "#d97706",
+  color: "white",
+  padding: "10px 16px",
+  border: "none",
+  borderRadius: "8px",
+  fontWeight: "bold",
+};
