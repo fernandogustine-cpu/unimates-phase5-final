@@ -31,12 +31,18 @@ export default function StudentPortal() {
     }
 
     setStudents(data || []);
+
+    const savedName = localStorage.getItem("student_name");
+
+    if (savedName) {
+      openStudentPortal(savedName, data || []);
+    }
   }
 
-  async function openStudentPortal(name) {
+  async function openStudentPortal(name, studentList = students) {
     setSelectedStudent(name);
 
-    const student = students.find((s) => s.full_name === name);
+    const student = studentList.find((s) => s.full_name === name);
     setStudentData(student || null);
 
     const { data: homeworkData } = await supabase
@@ -54,6 +60,11 @@ export default function StudentPortal() {
     setAttempts(attemptData || []);
   }
 
+  function logout() {
+    localStorage.removeItem("student_name");
+    window.location.href = "/login";
+  }
+
   const totalAttempts = attempts.length;
   const correctAttempts = attempts.filter((a) => a.is_correct === true).length;
   const puzzleScore = correctAttempts * 10;
@@ -63,7 +74,11 @@ export default function StudentPortal() {
   return (
     <div style={{ padding: "30px" }}>
       <h1>Uni-Mates Student Portal</h1>
-      <p>Students can view homework, puzzle scores, rating and progress.</p>
+      <p>View homework, puzzle scores, rating and progress.</p>
+
+      <button onClick={logout} style={logoutButton}>
+        Logout
+      </button>
 
       <select
         value={selectedStudent}
@@ -183,4 +198,13 @@ const gridStyle = {
   gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   gap: "16px",
   marginBottom: "25px",
+};
+
+const logoutButton = {
+  background: "#dc2626",
+  color: "white",
+  padding: "8px 14px",
+  border: "none",
+  borderRadius: "8px",
+  marginBottom: "15px",
 };
