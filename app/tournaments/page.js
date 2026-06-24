@@ -5,12 +5,6 @@ const { error } = await supabase
       name: tournamentName,
       venue: venue,
       start_date: tournamentDate,
-      date: tournamentDate
+      end_date: tournamentDate
     }
   ]);
-
-if (error) {
-  alert("Error adding tournament: " + error.message);
-} else {
-  alert("Tournament added successfully!");
-}
