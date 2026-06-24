@@ -1,10 +1,143 @@
-const { error } = await supabase
-  .from("tournaments")
-  .insert([
-    {
-      name: tournamentName,
-      venue: venue,
-      start_date: tournamentDate,
-      end_date: tournamentDate
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+export default function TournamentsPage() {
+  const [tournaments, setTournaments] = useState([]);
+  const [form, setForm] = useState({
+    name: "",
+    start_date: "",
+    venue: "",
+    status: "Upcoming",
+  });
+
+  useEffect(() => {
+    loadTournaments();
+  }, []);
+
+  async function loadTournaments() {
+    const { data, error } = await supabase
+      .from("tournaments")
+      .select("*")
+      .order("start_date", { ascending: true });
+
+    if (error) {
+      alert("Error loading tournaments: " + error.message);
+      return;
     }
-  ]);
+
+    setTournaments(data || []);
+  }
+
+  async function addTournament(e) {
+    e.preventDefault();
+
+    const { error } = await supabase.from("tournaments").insert({
+      name: form.name,
+      venue: form.venue,
+      start_date: form.start_date,
+      end_date: form.start_date,
+      status: form.status,
+    });
+
+    if (error) {
+      alert("Error adding tournament: " + error.message);
+      return;
+    }
+
+    setForm({
+      name: "",
+      start_date: "",
+      venue: "",
+      status: "Upcoming",
+    });
+
+    loadTournaments();
+  }
+
+  return (
+    <div style={{ padding: "30px" }}>
+      <h1>🏆 Uni-Mates Tournament Calendar</h1>
+      <p>Add and view upcoming chess tournaments.</p>
+
+      <form onSubmit={addTournament} style={cardStyle}>
+        <input
+          placeholder="Tournament name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          style={inputStyle}
+          required
+        />
+
+        <input
+          type="date"
+          value={form.start_date}
+          onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+          style={inputStyle}
+          required
+        />
+
+        <input
+          placeholder="Venue"
+          value={form.venue}
+          onChange={(e) => setForm({ ...form, venue: e.target.value })}
+          style={inputStyle}
+        />
+
+        <select
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          style={inputStyle}
+        >
+          <option value="Upcoming">Upcoming</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+
+        <button style={buttonStyle}>Add Tournament</button>
+      </form>
+
+      <h2>Upcoming Events</h2>
+
+      {tournaments.map((event) => (
+        <div key={event.id} style={cardStyle}>
+          <h3>{event.name}</h3>
+          <p><strong>Date:</strong> {event.start_date || "No date"}</p>
+          <p><strong>Venue:</strong> {event.venue || "No venue"}</p>
+          <p><strong>Status:</strong> {event.status || "Upcoming"}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "10px",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+};
+
+const cardStyle = {
+  background: "#fff",
+  padding: "18px",
+  marginBottom: "18px",
+  border: "1px solid #ddd",
+  borderRadius: "10px",
+};
+
+const buttonStyle = {
+  background: "#d97706",
+  color: "white",
+  padding: "10px 16px",
+  border: "none",
+  borderRadius: "8px",
+  fontWeight: "bold",
+};
