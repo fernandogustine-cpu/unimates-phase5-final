@@ -10,21 +10,24 @@ const supabase = createClient(
 
 export default function PGNLibraryPage() {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState({
-    title: "",
-    category: "",
-    pgn_text: "",
-  });
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [pgnText, setPgnText] = useState("");
 
   useEffect(() => {
     loadPGNs();
   }, []);
 
   async function loadPGNs() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("pgn_library")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (error) {
+      alert("Error loading PGNs: " + error.message);
+      return;
+    }
 
     setItems(data || []);
   }
@@ -32,14 +35,29 @@ export default function PGNLibraryPage() {
   async function addPGN(e) {
     e.preventDefault();
 
-    const { error } = await supabase.from("pgn_library").insert(form);
+    const { error } = await supabase.from("pgn_library").insert([
+      {
+        title: title,
+        category: category,
+        pgn: pgnText,
+        pgn_text: pgnText,
+        player_name: "Coach Fernando",
+        opponent_name: "Training Game",
+        coach_notes: "",
+      },
+    ]);
 
     if (error) {
       alert("Error adding PGN: " + error.message);
       return;
     }
 
-    setForm({ title: "", category: "", pgn_text: "" });
+    alert("PGN saved successfully!");
+
+    setTitle("");
+    setCategory("");
+    setPgnText("");
+
     loadPGNs();
   }
 
@@ -51,23 +69,23 @@ export default function PGNLibraryPage() {
       <form onSubmit={addPGN} style={cardStyle}>
         <input
           placeholder="PGN title"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           style={inputStyle}
           required
         />
 
         <input
           placeholder="Category e.g. French Defence, Jobava, Tactics"
-          value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
           style={inputStyle}
         />
 
         <textarea
           placeholder="Paste PGN here"
-          value={form.pgn_text}
-          onChange={(e) => setForm({ ...form, pgn_text: e.target.value })}
+          value={pgnText}
+          onChange={(e) => setPgnText(e.target.value)}
           style={{ ...inputStyle, minHeight: "180px" }}
           required
         />
@@ -75,13 +93,29 @@ export default function PGNLibraryPage() {
         <button style={buttonStyle}>Save PGN</button>
       </form>
 
-      {items.map((item) => (
-        <div key={item.id} style={cardStyle}>
-          <h2>{item.title}</h2>
-          <p><strong>Category:</strong> {item.category || "General"}</p>
-          <pre style={pgnBox}>{item.pgn_text}</pre>
-        </div>
-      ))}
+      <h2>Saved PGNs</h2>
+
+      {items.length === 0 ? (
+        <p>No PGNs saved yet.</p>
+      ) : (
+        items.map((item) => (
+          <div key={item.id} style={cardStyle}>
+            <h2>{item.title}</h2>
+            <p>
+              <strong>Category:</strong> {item.category || "General"}
+            </p>
+            <p>
+              <strong>Player:</strong> {item.player_name || "Coach Fernando"}
+            </p>
+            <p>
+              <strong>Opponent:</strong>{" "}
+              {item.opponent_name || "Training Game"}
+            </p>
+
+            <pre style={pgnBox}>{item.pgn_text || item.pgn}</pre>
+          </div>
+        ))
+      )}
     </div>
   );
 }
